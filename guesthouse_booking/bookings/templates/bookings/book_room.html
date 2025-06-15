@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Book Room</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
+    <!-- Vue 3 CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body>
+    <div id="app">
+        <h1>Book Room [[ room.room_number ]]</h1>
+        <p>Room Type: [[ room.room_type ]]</p>
+        <p>Price per Night: $[[ room.price_per_night ]]</p>
+        <p>Amenities: [[ room.amenities ]]</p>
+        
+        <form @submit.prevent="submitBooking">
+            <div class="form-group">
+                <label for="check_in">Check-in Date:</label>
+                <input type="date" id="check_in" v-model="booking.checkIn" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="check_out">Check-out Date:</label>
+                <input type="date" id="check_out" v-model="booking.checkOut" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="guests">Number of Guests:</label>
+                <input type="number" id="guests" v-model="booking.guests" min="1" required>
+            </div>
+            
+            <button type="submit">Book Now</button>
+        </form>
+    </div>
+
+    <script>
+        const { createApp } = Vue
+
+        const app = createApp({
+            delimiters: ['[[', ']]'],  // Change delimiters to avoid conflict with Django templates
+            data() {
+                return {
+                    room: {
+                        room_number: '{{ room.room_number }}',
+                        room_type: '{{ room.room_type }}',
+                        price_per_night: '{{ room.price_per_night }}',
+                        amenities: '{{ room.get_amenities }}'
+                    },
+                    booking: {
+                        checkIn: '',
+                        checkOut: '',
+                        guests: 1
+                    }
+                }
+            },
+            methods: {
+                submitBooking() {
+                    // Here we'll handle the booking submission
+                    console.log('Booking submitted:', this.booking)
+                    // You can add AJAX call to your Django backend here
+                }
+            }
+        })
+
+        app.mount('#app')
+    </script>
+</body>
+</html>
