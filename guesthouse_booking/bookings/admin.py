@@ -1,7 +1,7 @@
 # bookings/admin.py
 
 from django.contrib import admin
-from .models import Guest, Room, Booking, Payment, Review, Amenity
+from .models import Guest, Room, Booking, Payment, Review, Amenity, SliderImage, SpecialOffer
 
 class AmenityInline(admin.TabularInline):
     model = Room.amenities.through  
@@ -47,3 +47,18 @@ class ReviewAdmin(admin.ModelAdmin):
 @admin.register(Amenity)
 class AmenityAdmin(admin.ModelAdmin):
     list_display = ('name',)
+
+@admin.register(SliderImage)
+class SliderImageAdmin(admin.ModelAdmin):
+    list_display = ('title', 'order', 'is_active', 'created_at')
+    list_filter = ('is_active',)
+    list_editable = ('order', 'is_active')
+    search_fields = ('title', 'description')
+    ordering = ('order', '-created_at')
+
+@admin.register(SpecialOffer)
+class SpecialOfferAdmin(admin.ModelAdmin):
+    list_display = ('title', 'price', 'is_active', 'created_at')
+    list_filter = ('is_active',)
+    search_fields = ('title', 'short_description', 'full_description')
+    readonly_fields = ('created_at', 'updated_at')

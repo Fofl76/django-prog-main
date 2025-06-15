@@ -63,9 +63,9 @@
               height="500"
             >
               <v-carousel-item
-                v-for="(image, i) in roomImages"
+                v-for="(image, i) in sliderImages"
                 :key="i"
-                :src="image"
+                :src="image.image"
                 cover
               >
                 <v-sheet
@@ -77,6 +77,10 @@
                     align="center"
                     justify="center"
                   >
+                    <v-col cols="12" class="text-center">
+                      <h2 class="text-h4 font-weight-bold text-white text-shadow">{{ image.title }}</h2>
+                      <p class="text-h6 text-white text-shadow">{{ image.description }}</p>
+                    </v-col>
                   </v-row>
                 </v-sheet>
               </v-carousel-item>
@@ -91,27 +95,65 @@
           </h2>
           <v-row>
             <v-col
-              v-for="(tour, i) in tours"
+              v-for="(offer, i) in specialOffers"
               :key="i"
               cols="12"
               sm="6"
               md="4"
             >
               <v-card
-                class="mx-auto"
+                class="mx-auto offer-card"
                 max-width="400"
+                @click="openOfferDetails(offer)"
               >
                 <v-img
-                  :src="tour.image"
+                  :src="offer.image"
                   height="200"
                   cover
                 ></v-img>
-                <v-card-title>{{ tour.title }}</v-card-title>
-                <v-card-text>{{ tour.description }}</v-card-text>
+                <v-card-title>{{ offer.title }}</v-card-title>
+                <v-card-text>{{ offer.short_description }}</v-card-text>
+                <v-card-actions v-if="offer.price">
+                  <v-spacer></v-spacer>
+                  <span class="text-h6 primary--text">{{ offer.price }} ₽</span>
+                </v-card-actions>
               </v-card>
             </v-col>
           </v-row>
         </v-container>
+
+        <!-- Модальное окно с деталями предложения -->
+        <v-dialog
+          v-model="showOfferDialog"
+          max-width="800"
+        >
+          <v-card v-if="selectedOffer">
+            <v-img
+              :src="selectedOffer.image"
+              height="300"
+              cover
+            ></v-img>
+            <v-card-title class="text-h4">
+              {{ selectedOffer.title }}
+            </v-card-title>
+            <v-card-text>
+              <p class="text-body-1">{{ selectedOffer.full_description }}</p>
+              <v-divider class="my-4"></v-divider>
+              <div v-if="selectedOffer.price" class="text-h5 primary--text">
+                Цена: {{ selectedOffer.price }} ₽
+              </div>
+            </v-card-text>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn
+                color="primary"
+                @click="showOfferDialog = false"
+              >
+                Закрыть
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
 
         <!-- Недавние отзывы -->
         <v-container class="mt-12">
@@ -180,44 +222,10 @@ export default {
         '3 взрослых',
         '4 взрослых'
       ],
-      roomImages: [
-        'https://via.placeholder.com/800x600?text=Room+1',
-        'https://via.placeholder.com/800x600?text=Room+2',
-        'https://via.placeholder.com/800x600?text=Room+3',
-        'https://via.placeholder.com/800x600?text=Room+4'
-      ],
-      tours: [
-        {
-          title: 'Джип-тур',
-          image: 'https://via.placeholder.com/400x300?text=Tour+1',
-          description: 'Захватывающее путешествие по горным маршрутам'
-        },
-        {
-          title: 'Водные развлечения',
-          image: 'https://via.placeholder.com/400x300?text=Tour+2',
-          description: 'Активный отдых на воде'
-        },
-        {
-          title: 'Морская прогулка',
-          image: 'https://via.placeholder.com/400x300?text=Tour+3',
-          description: 'Прогулка на катере вдоль побережья'
-        },
-        {
-          title: 'Горные прогулки',
-          image: 'https://via.placeholder.com/400x300?text=Tour+4',
-          description: 'Пешие прогулки по живописным местам'
-        },
-        {
-          title: 'Экскурсии',
-          image: 'https://via.placeholder.com/400x300?text=Tour+5',
-          description: 'Посещение исторических мест'
-        },
-        {
-          title: 'Достопримечательности',
-          image: 'https://via.placeholder.com/400x300?text=Tour+6',
-          description: 'Знакомство с местной архитектурой'
-        }
-      ],
+      sliderImages: [],
+      specialOffers: [],
+      showOfferDialog: false,
+      selectedOffer: null,
       recentReviews: [
         {
           author: 'Анна Петрова',
@@ -259,6 +267,26 @@ export default {
       // Здесь будет логика глобального поиска
       console.log('Поиск:', this.globalSearch)
     },
+    async fetchSliderImages() {
+      try {
+        const response = await this.$axios.get('/api/slider-images/')
+        this.sliderImages = response.data
+      } catch (error) {
+        console.error('Ошибка при загрузке изображений слайдера:', error)
+      }
+    },
+    async fetchSpecialOffers() {
+      try {
+        const response = await this.$axios.get('/api/special-offers/')
+        this.specialOffers = response.data
+      } catch (error) {
+        console.error('Ошибка при загрузке специальных предложений:', error)
+      }
+    },
+    openOfferDetails(offer) {
+      this.selectedOffer = offer
+      this.showOfferDialog = true
+    },
     async handleLogout() {
       try {
         await this.logout()
@@ -267,6 +295,10 @@ export default {
         console.error('Ошибка при выходе:', error)
       }
     }
+  },
+  async created() {
+    await this.fetchSliderImages()
+    await this.fetchSpecialOffers()
   }
 }
 </script>
@@ -354,5 +386,18 @@ export default {
   color: #666;
   line-height: 1.6;
   font-size: 0.95rem;
+}
+
+.offer-card {
+  transition: transform 0.2s;
+  cursor: pointer;
+}
+
+.offer-card:hover {
+  transform: translateY(-5px);
+}
+
+.text-shadow {
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 </style>

@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.urls import reverse
 from django.http import HttpResponseRedirect
-from .models import Room, Amenity, Booking, Review
+from .models import Room, Amenity, Booking, Review, SliderImage, SpecialOffer
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from .forms import ReviewForm
@@ -13,7 +13,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
-from .serializers import RoomSerializer, BookingSerializer, ReviewSerializer, UserSerializer
+from .serializers import RoomSerializer, BookingSerializer, ReviewSerializer, UserSerializer, SliderImageSerializer, SpecialOfferSerializer
 from django.db.models import Q
 from datetime import datetime
 from rest_framework.views import APIView
@@ -569,14 +569,12 @@ class RegisterView(APIView):
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class RoomViewSet(viewsets.ModelViewSet):
-    queryset = Room.objects.all()
-    serializer_class = RoomSerializer
+class SliderImageViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = SliderImage.objects.filter(is_active=True).order_by('order')
+    serializer_class = SliderImageSerializer
+    permission_classes = [AllowAny]
 
-class BookingViewSet(viewsets.ModelViewSet):
-    queryset = Booking.objects.all()
-    serializer_class = BookingSerializer
-
-class ReviewViewSet(viewsets.ModelViewSet):
-    queryset = Review.objects.all()
-    serializer_class = ReviewSerializer
+class SpecialOfferViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = SpecialOffer.objects.filter(is_active=True)
+    serializer_class = SpecialOfferSerializer
+    permission_classes = [AllowAny]

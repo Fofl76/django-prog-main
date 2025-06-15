@@ -549,3 +549,37 @@ class Review(models.Model):
 
     def __str__(self):
         return f"Review {self.id} - {self.room} by {self.guest.username if self.guest else 'Anonymous'}"
+
+class SliderImage(models.Model):
+    image = models.ImageField(upload_to='slider_images/')
+    title = models.CharField(max_length=200, blank=True)
+    description = models.TextField(blank=True)
+    order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', '-created_at']
+        verbose_name = 'Изображение слайдера'
+        verbose_name_plural = 'Изображения слайдера'
+
+    def __str__(self):
+        return self.title or f'Слайд {self.id}'
+
+class SpecialOffer(models.Model):
+    title = models.CharField(max_length=200, verbose_name='Название')
+    image = models.ImageField(upload_to='special_offers/', verbose_name='Изображение')
+    short_description = models.TextField(verbose_name='Краткое описание')
+    full_description = models.TextField(verbose_name='Полное описание')
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='Цена')
+    is_active = models.BooleanField(default=True, verbose_name='Активно')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Специальное предложение'
+        verbose_name_plural = 'Специальные предложения'
+
+    def __str__(self):
+        return self.title

@@ -7,6 +7,8 @@ router = DefaultRouter()
 router.register(r'rooms', views.RoomViewSet)
 router.register(r'bookings', views.BookingViewSet)
 router.register(r'reviews', views.ReviewViewSet)
+router.register(r'slider-images', views.SliderImageViewSet)
+router.register(r'special-offers', views.SpecialOfferViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),

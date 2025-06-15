@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Room, Booking, Review, Amenity
+from .models import Room, Booking, Review, Amenity, SliderImage, SpecialOffer
 from django.contrib.auth.models import User
 
 class UserSerializer(serializers.ModelSerializer):
@@ -45,4 +45,14 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = '__all__'
-        read_only_fields = ('guest', 'review_date') 
+        read_only_fields = ('guest', 'review_date')
+
+class SliderImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SliderImage
+        fields = ['id', 'image', 'title', 'description', 'order', 'is_active']
+
+class SpecialOfferSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SpecialOffer
+        fields = ['id', 'title', 'image', 'short_description', 'full_description', 'price', 'is_active'] 
