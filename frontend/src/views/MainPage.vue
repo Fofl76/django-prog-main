@@ -68,21 +68,18 @@
                 :src="image.image"
                 cover
               >
-                <v-sheet
-                  height="100%"
-                  tile
-                >
+                <template v-slot:placeholder>
                   <v-row
-                    class="fill-height"
+                    class="fill-height ma-0"
                     align="center"
                     justify="center"
                   >
-                    <v-col cols="12" class="text-center">
-                      <h2 class="text-h4 font-weight-bold text-white text-shadow">{{ image.title }}</h2>
-                      <p class="text-h6 text-white text-shadow">{{ image.description }}</p>
-                    </v-col>
+                    <v-progress-circular
+                      indeterminate
+                      color="primary"
+                    ></v-progress-circular>
                   </v-row>
-                </v-sheet>
+                </template>
               </v-carousel-item>
             </v-carousel>
           </v-col>
@@ -203,6 +200,10 @@
 <script>
 import { mapState, mapActions } from 'vuex'
 import AppHeader from './Header.vue'
+import axios from 'axios'
+
+// Устанавливаем базовый URL для всех запросов
+axios.defaults.baseURL = 'http://localhost:8000'
 
 export default {
   name: 'MainPage',
@@ -269,15 +270,31 @@ export default {
     },
     async fetchSliderImages() {
       try {
-        const response = await this.$axios.get('/api/slider-images/')
-        this.sliderImages = response.data
+        console.log('Начинаем загрузку изображений слайдера...')
+        const response = await axios.get('/api/slider-images/')
+        console.log('Ответ от сервера:', response)
+        console.log('Полученные изображения:', response.data)
+        
+        // Проверяем формат данных и добавляем полный URL для изображений
+        this.sliderImages = response.data.map(image => {
+          console.log('Обработка изображения:', image)
+          // Убедимся, что URL изображения начинается с /media/
+          // Удаляем эту логику, так как полный URL уже приходит с бэкенда
+          return {
+            ...image,
+            image: image.image // Используем URL как есть
+          }
+        })
+        
+        console.log('sliderImages после обработки:', this.sliderImages)
       } catch (error) {
         console.error('Ошибка при загрузке изображений слайдера:', error)
+        console.error('Детали ошибки:', error.response || error.message)
       }
     },
     async fetchSpecialOffers() {
       try {
-        const response = await this.$axios.get('/api/special-offers/')
+        const response = await axios.get('/api/special-offers/')
         this.specialOffers = response.data
       } catch (error) {
         console.error('Ошибка при загрузке специальных предложений:', error)
