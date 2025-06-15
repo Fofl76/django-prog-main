@@ -1,15 +1,17 @@
 <template>
   <header class="header">
     <div class="logo">
-      <img src="../assets/img/logo.png" alt="Логотип" />
+      <span>Гостевой Дом Приветливый</span> <!-- Replace with image or SVG if preferred -->
     </div>
     <div class="search-bar">
-      <input type="text" placeholder="Поиск..." />
+      <input type="text" placeholder="Двухместный номер" />
       <button>Найти</button>
     </div>
     <div class="actions">
       <button @click="goToCatalog">Каталог</button>
-      <button @click="goToProfile">Личный кабинет</button>
+      <button @click="goToProfile">
+        <span>Личный кабинет</span> <!-- Add user icon here if possible -->
+      </button>
     </div>
   </header>
 </template>
@@ -40,28 +42,32 @@ const goToProfile = () => {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
 }
 
-.logo img {
-  height: 100px;
+.logo span {
+  font-size: 24px;
+  font-weight: bold;
+  color: #007bff; /* Match the blue theme */
 }
 
 .search-bar {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-right: 160px;
 }
 
 .search-bar input {
-  padding: 5px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 5px 10px;
+  border: 2px solid #007bff;
+  border-radius: 20px;
+  width: 200px;
 }
 
 .search-bar button {
-  padding: 5px 10px;
+  padding: 5px 15px;
   background-color: #007bff;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 20px;
   cursor: pointer;
 }
 
@@ -71,16 +77,17 @@ const goToProfile = () => {
 
 .actions button {
   margin-left: 10px;
-  margin-right: 50px;
-  padding: 5px 10px;
-  background-color: #007bff;
+  padding: 5px 15px;
+  background-color: #ADD8E6; /* Light blue for buttons */
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 20px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
 }
 
 .actions button:hover {
-  background-color: #0056b3;
+  background-color: #87CEEB;
 }
 </style>

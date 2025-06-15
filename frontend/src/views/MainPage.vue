@@ -1,99 +1,13 @@
 <template>
   <div>
-    <!-- Верхняя панель (хедер) -->
-    <v-app-bar 
-      flat 
-      color="white" 
-      class="px-4"
-      height="80"
-    >
-      <!-- Логотип слева -->
-      <router-link 
-        to="/" 
-        class="text-decoration-none d-flex align-center"
-      >
-        <v-img
-          src="@/assets/img/logo.png"
-          max-width="180"
-          contain
-          class="mr-4"
-        ></v-img>
-      </router-link>
-
-      <v-spacer></v-spacer>
-      
-      <!-- Поиск по центру -->
-      <v-text-field
-        v-model="globalSearch"
-        prepend-inner-icon="mdi-magnify"
-        placeholder="Поиск по сайту"
-        single-line
-        hide-details
-        class="mx-4 search-field"
-        style="max-width: 400px;"
-        rounded
-        filled
-        dense
-        @keyup.enter="handleGlobalSearch"
-      ></v-text-field>
-
-      <v-spacer></v-spacer>
-
-      <!-- Кнопка каталога справа -->
-      <v-btn
-        color="primary"
-        class="text-body-1 font-weight-medium mr-4"
-        rounded
-        to="/rooms"
-      >
-        Каталог
-      </v-btn>
-
-      <!-- Иконка личного кабинета -->
-      <v-menu
-        offset-y
-        transition="slide-y-transition"
-      >
-        <template v-slot:activator="{ props }">
-          <v-btn
-            icon
-            v-bind="props"
-            class="ml-2"
-          >
-            <v-icon size="32">mdi-account-circle</v-icon>
-          </v-btn>
-        </template>
-
-        <v-list>
-          <template v-if="isAuthenticated">
-            <v-list-item to="/profile">
-              <v-list-item-title>Личный кабинет</v-list-item-title>
-            </v-list-item>
-            <v-list-item to="/bookings">
-              <v-list-item-title>Мои бронирования</v-list-item-title>
-            </v-list-item>
-            <v-divider></v-divider>
-            <v-list-item @click="handleLogout">
-              <v-list-item-title>Выйти</v-list-item-title>
-            </v-list-item>
-          </template>
-          <template v-else>
-            <v-list-item to="/login">
-              <v-list-item-title>Войти</v-list-item-title>
-            </v-list-item>
-            <v-list-item to="/register">
-              <v-list-item-title>Зарегистрироваться</v-list-item-title>
-            </v-list-item>
-          </template>
-        </v-list>
-      </v-menu>
-    </v-app-bar>
+    <!-- Импортированный хедер -->
+    <AppHeader />
 
     <!-- Основной контент -->
     <v-main>
       <v-container fluid class="pa-0">
         <!-- Заголовок -->
-        <v-row justify="center" class="my-8">
+        <v-row justify="center" class="mt-20">
           <v-col cols="12" class="text-center">
             <h1 class="text-h3 font-weight-bold primary--text">
               С нами вы точно отдохнёте!
@@ -104,39 +18,37 @@
         <!-- Форма поиска -->
         <v-row justify="center" class="mb-8">
           <v-col cols="12" sm="10" md="8" lg="6">
-            <v-card class="d-flex align-center" flat>
+            <v-card class="search-form" flat>
               <v-col>
-                <v-text-field
+                <input
                   v-model="checkIn"
-                  label="Дата заезда"
                   type="date"
-                  hide-details
-                ></v-text-field>
+                  placeholder="Дата заезда"
+                  class="search-input"
+                />
               </v-col>
               <v-col>
-                <v-text-field
+                <input
                   v-model="checkOut"
-                  label="Дата выезда"
                   type="date"
-                  hide-details
-                ></v-text-field>
+                  placeholder="Дата выезда"
+                  class="search-input"
+                />
               </v-col>
               <v-col>
-                <v-select
+                <select
                   v-model="guests"
-                  :items="guestOptions"
-                  label="Количество гостей"
-                  hide-details
-                ></v-select>
+                  class="search-input"
+                >
+                  <option v-for="option in guestOptions" :key="option" :value="option">
+                    {{ option }}
+                  </option>
+                </select>
               </v-col>
               <v-col cols="auto">
-                <v-btn
-                  color="primary"
-                  x-large
-                  class="px-8"
-                >
+                <button class="search-button">
                   Подобрать
-                </v-btn>
+                </button>
               </v-col>
             </v-card>
           </v-col>
@@ -200,6 +112,47 @@
             </v-col>
           </v-row>
         </v-container>
+
+        <!-- Недавние отзывы -->
+        <v-container class="mt-12">
+          <h2 class="text-h4 font-weight-bold text-center mb-6">
+            Недавние отзывы
+          </h2>
+          <v-row>
+            <v-col
+              v-for="(review, i) in recentReviews"
+              :key="i"
+              cols="12"
+              sm="6"
+              md="4"
+            >
+              <v-card class="mx-auto review-card" max-width="400">
+                <v-card-text>
+                  <div class="d-flex align-center mb-2">
+                    <v-avatar color="primary" size="40" class="mr-3">
+                      {{ review.author.charAt(0) }}
+                    </v-avatar>
+                    <div>
+                      <div class="font-weight-bold">{{ review.author }}</div>
+                      <div class="text-caption">{{ review.date }}</div>
+                    </div>
+                  </div>
+                  <div class="mb-2">
+                    <v-rating
+                      v-model="review.rating"
+                      readonly
+                      dense
+                      color="amber"
+                      background-color="grey lighten-1"
+                      half-increments
+                    ></v-rating>
+                  </div>
+                  <p class="review-text">{{ review.text }}</p>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+        </v-container>
       </v-container>
     </v-main>
   </div>
@@ -207,9 +160,13 @@
 
 <script>
 import { mapState, mapActions } from 'vuex'
+import AppHeader from './Header.vue'
 
 export default {
   name: 'MainPage',
+  components: {
+    AppHeader
+  },
   data() {
     return {
       globalSearch: '',
@@ -260,6 +217,26 @@ export default {
           image: 'https://via.placeholder.com/400x300?text=Tour+6',
           description: 'Знакомство с местной архитектурой'
         }
+      ],
+      recentReviews: [
+        {
+          author: 'Анна Петрова',
+          date: '15.03.2024',
+          rating: 5,
+          text: 'Отличный отдых! Прекрасный сервис, уютные номера и внимательный персонал. Обязательно вернемся сюда снова.'
+        },
+        {
+          author: 'Иван Смирнов',
+          date: '10.03.2024',
+          rating: 4.5,
+          text: 'Хороший гостевой дом с отличным расположением. Особенно понравились экскурсии и местная кухня.'
+        },
+        {
+          author: 'Мария Иванова',
+          date: '05.03.2024',
+          rating: 5,
+          text: 'Прекрасное место для семейного отдыха. Дети в восторге от бассейна и развлекательной программы.'
+        }
       ]
     }
   },
@@ -295,21 +272,40 @@ export default {
 </script>
 
 <style scoped>
-.search-field {
-  background-color: #f5f5f5;
-  border-radius: 24px !important;
+.search-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #fff;
+  padding: 10px;
+  border-radius: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.search-field :deep(.v-field__input) {
-  padding: 8px 16px;
+.search-input {
+  padding: 5px 10px;
+  border: 2px solid #007bff;
+  border-radius: 20px;
+  width: 100%;
+  outline: none;
 }
 
-.search-field :deep(.v-field__prepend-inner) {
-  padding-left: 12px;
+.search-input:focus {
+  border-color: #0056b3;
 }
 
-.v-btn {
-  text-transform: none !important;
+.search-button {
+  padding: 5px 15px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.search-button:hover {
+  background-color: #0056b3;
 }
 
 /* Стили для активной ссылки логотипа */
@@ -341,5 +337,22 @@ export default {
   .v-btn:not(.v-btn--icon) {
     font-size: 14px;
   }
+}
+.v-main{
+  margin-top: 180px;
+}
+
+.review-card {
+  transition: transform 0.2s;
+}
+
+.review-card:hover {
+  transform: translateY(-5px);
+}
+
+.review-text {
+  color: #666;
+  line-height: 1.6;
+  font-size: 0.95rem;
 }
 </style>
