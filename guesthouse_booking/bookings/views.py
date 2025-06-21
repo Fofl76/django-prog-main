@@ -4,19 +4,22 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.urls import reverse
-from django.http import HttpResponseRedirect
-from .models import Room, Amenity, Booking, Review, SliderImage, SpecialOffer
+from django.http import HttpResponseRedirect, HttpResponse
+from .models import Room, Amenity, Booking, Review, SliderImage, SpecialOffer, Guest, Payment, UserRole, Document
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from .forms import ReviewForm
+from .forms import ReviewForm, DocumentUploadForm, DocumentFilterForm, BulkDocumentUploadForm, RoomForm, BookingForm, PaymentForm
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
-from .serializers import RoomSerializer, BookingSerializer, ReviewSerializer, UserSerializer, SliderImageSerializer, SpecialOfferSerializer
+from .serializers import RoomSerializer, BookingSerializer, ReviewSerializer, UserSerializer, SliderImageSerializer, SpecialOfferSerializer, GuestSerializer, PaymentSerializer, UserRoleSerializer, AmenitySerializer
 from django.db.models import Q
 from datetime import datetime
 from rest_framework.views import APIView
+from django.db.models import Prefetch
+from .filters import RoomFilter, BookingFilter, ReviewFilter, PaymentFilter, GuestFilter
+from django.core.paginator import Paginator
 
 def index(request):
     rooms = Room.objects.all()
@@ -237,9 +240,22 @@ def rooms_without_reviews(request):
     return Response(serializer.data)
 
 class RoomViewSet(viewsets.ModelViewSet):
-    queryset = Room.objects.all()
+    queryset = Room.objects.select_related().prefetch_related('amenities', 'reviews').all()
     serializer_class = RoomSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    filterset_class = RoomFilter
+    search_fields = ['room_number', 'room_type']
+    ordering_fields = ['price_per_night', 'max_occupancy', 'room_number']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.action == 'list':
+            return queryset.select_related().prefetch_related(
+                'amenities',
+                'reviews',
+                'bookings'
+            )
+        return queryset
 
     @action(detail=False, methods=['get'])
     def available(self, request):
@@ -428,13 +444,45 @@ class RoomViewSet(viewsets.ModelViewSet):
         serializer = BookingSerializer(bookings, many=True)
         return Response(serializer.data)
 
-class BookingViewSet(viewsets.ModelViewSet):
-    queryset = Booking.objects.all()
-    serializer_class = BookingSerializer
-    permission_classes = [IsAuthenticated]
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({
+            'min_rating': self.request.query_params.get('min_rating', 0),
+            'check_date': self.request.query_params.get('check_date'),
+            'start_date': self.request.query_params.get('start_date'),
+            'include_guest_details': self.request.query_params.get('include_guest_details', False),
+            'discount_percentage': self.request.query_params.get('discount_percentage', 0)
+        })
+        return context
 
-    def perform_create(self, serializer):
-        serializer.save(guest=self.request.user)
+class BookingViewSet(viewsets.ModelViewSet):
+    queryset = Booking.objects.select_related('guest', 'room').prefetch_related('payments').all()
+    serializer_class = BookingSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filterset_class = BookingFilter
+    search_fields = ['room__room_number', 'room__room_type']
+    ordering_fields = ['check_in', 'check_out', 'created_at']
+
+    def get_queryset(self):
+        if self.action == 'my':
+            return Booking.objects.select_related(
+                'guest',
+                'room',
+                'room__amenities'
+            ).prefetch_related(
+                'payments',
+                'room__reviews'
+            ).filter(guest=self.request.user)
+        return Booking.objects.select_related(
+            'guest',
+            'room'
+        ).prefetch_related('payments')
+
+    @action(detail=False, methods=['get'])
+    def my(self, request):
+        bookings = self.get_queryset()
+        serializer = self.get_serializer(bookings, many=True)
+        return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
     def active(self, request):
@@ -506,27 +554,62 @@ class BookingViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(bookings, many=True)
         return Response(serializer.data)
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({
+            'include_amenities': self.request.query_params.get('include_amenities', False),
+            'include_discount': self.request.query_params.get('include_discount', False),
+            'discount_percentage': self.request.query_params.get('discount_percentage', 0),
+            'cancellation_policy': self.request.query_params.get('cancellation_policy', 'standard'),
+            'include_partial': self.request.query_params.get('include_partial', True),
+            'include_contact': self.request.query_params.get('include_contact', False)
+        })
+        return context
+
 class ReviewViewSet(viewsets.ModelViewSet):
-    queryset = Review.objects.all().order_by('-review_date')  # Сортировка по дате отзыва (сначала новые)
+    queryset = Review.objects.select_related('guest', 'room').all()
     serializer_class = ReviewSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    filterset_class = ReviewFilter
+    search_fields = ['comment', 'room__room_number']
+    ordering_fields = ['rating', 'review_date']
+
+    def get_queryset(self):
+        if self.action == 'my':
+            return Review.objects.select_related(
+                'guest',
+                'room'
+            ).filter(guest=self.request.user)
+        return Review.objects.select_related(
+            'guest',
+            'room'
+        ).all()
+
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny])
+    def recent(self, request):
+        """Возвращает 3 последних отзыва."""
+        reviews = Review.objects.order_by('-review_date')[:3]
+        serializer = self.get_serializer(reviews, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def my(self, request):
+        reviews = self.get_queryset()
+        serializer = self.get_serializer(reviews, many=True)
+        return Response(serializer.data)
 
     def perform_create(self, serializer):
         serializer.save(guest=self.request.user)
 
-    def get_queryset(self):
-        """
-        Переопределяем queryset для добавления различных вариантов сортировки
-        """
-        queryset = super().get_queryset()
-        sort_by = self.request.query_params.get('sort_by', None)
-        
-        if sort_by == 'rating':
-            queryset = queryset.order_by('-rating', '-review_date')
-        elif sort_by == 'oldest':
-            queryset = queryset.order_by('review_date')
-            
-        return queryset
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({
+            'include_title': self.request.query_params.get('include_title', False),
+            'include_price': self.request.query_params.get('include_price', False),
+            'min_rating': self.request.query_params.get('min_rating', 0),
+            'max_comment_length': self.request.query_params.get('max_comment_length')
+        })
+        return context
 
 @api_view(['POST'])
 def login_view(request):
@@ -569,12 +652,306 @@ class RegisterView(APIView):
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class SliderImageViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = SliderImage.objects.filter(is_active=True).order_by('order')
+class SliderImageViewSet(viewsets.ModelViewSet):
+    queryset = SliderImage.objects.all()
     serializer_class = SliderImageSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
-class SpecialOfferViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = SpecialOffer.objects.filter(is_active=True)
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({
+            'image_size': self.request.query_params.get('image_size', 'original'),
+            'default_duration': int(self.request.query_params.get('default_duration', 5))
+        })
+        return context
+
+class SpecialOfferViewSet(viewsets.ModelViewSet):
+    queryset = SpecialOffer.objects.all()
     serializer_class = SpecialOfferSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({
+            'base_discount': int(self.request.query_params.get('base_discount', 15)),
+            'max_days': int(self.request.query_params.get('max_days', 30)),
+            'include_tax': self.request.query_params.get('include_tax', False),
+            'tax_rate': float(self.request.query_params.get('tax_rate', 0.2))
+        })
+        return context
+
+class ProfileViewSet(viewsets.ModelViewSet):
+    serializer_class = GuestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filterset_class = GuestFilter
+    search_fields = ['email', 'phone_number', 'first_name', 'last_name']
+    ordering_fields = ['created_at', 'updated_at']
+
+    def get_queryset(self):
+        return Guest.objects.select_related(
+            'user',
+            'role'
+        ).filter(user=self.request.user)
+
+    def get_object(self):
+        return self.get_queryset().first()
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=False, methods=['get', 'put', 'patch'])
+    def me(self, request):
+        guest = self.get_object()
+        if request.method == 'GET':
+            serializer = self.get_serializer(guest)
+            return Response(serializer.data)
+        elif request.method in ['PUT', 'PATCH']:
+            serializer = self.get_serializer(guest, data=request.data, partial=request.method == 'PATCH')
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({
+            'include_cancelled': self.request.query_params.get('include_cancelled', False),
+            'period': self.request.query_params.get('period', 'all'),
+            'min_rating': self.request.query_params.get('min_rating', 0)
+        })
+        return context
+
+class PaymentViewSet(viewsets.ModelViewSet):
+    queryset = Payment.objects.select_related('booking', 'booking__guest', 'booking__room').all()
+    serializer_class = PaymentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filterset_class = PaymentFilter
+    search_fields = ['booking__room__room_number']
+    ordering_fields = ['amount', 'payment_date']
+
+    def get_queryset(self):
+        return Payment.objects.select_related(
+            'booking',
+            'booking__guest',
+            'booking__room'
+        ).filter(booking__guest=self.request.user)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({
+            'include_room_details': self.request.query_params.get('include_room_details', False),
+            'refund_period': self.request.query_params.get('refund_period', 30),
+            'currency': self.request.query_params.get('currency', 'RUB'),
+            'include_tax': self.request.query_params.get('include_tax', False),
+            'tax_rate': float(self.request.query_params.get('tax_rate', 0.2))
+        })
+        return context
+
+class AmenityViewSet(viewsets.ModelViewSet):
+    queryset = Amenity.objects.prefetch_related('rooms').all()
+    serializer_class = AmenitySerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+@login_required
+def document_list(request):
+    """Список документов с фильтрацией"""
+    documents = Document.objects.all()
+    
+    # Применяем фильтры
+    filter_form = DocumentFilterForm(request.GET)
+    if filter_form.is_valid():
+        if filter_form.cleaned_data.get('file_type'):
+            documents = documents.filter(file_type=filter_form.cleaned_data['file_type'])
+        
+        if filter_form.cleaned_data.get('is_public') != '':
+            is_public = filter_form.cleaned_data['is_public'] == 'True'
+            documents = documents.filter(is_public=is_public)
+        
+        if filter_form.cleaned_data.get('uploaded_after'):
+            documents = documents.filter(uploaded_at__gte=filter_form.cleaned_data['uploaded_after'])
+        
+        if filter_form.cleaned_data.get('uploaded_before'):
+            documents = documents.filter(uploaded_at__lte=filter_form.cleaned_data['uploaded_before'])
+        
+        if filter_form.cleaned_data.get('search'):
+            search = filter_form.cleaned_data['search']
+            documents = documents.filter(
+                Q(title__icontains=search) | 
+                Q(description__icontains=search)
+            )
+    
+    # Пагинация
+    paginator = Paginator(documents, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'filter_form': filter_form,
+        'total_documents': documents.count(),
+    }
+    return render(request, 'bookings/document_list.html', context)
+
+@login_required
+def document_upload(request):
+    """Загрузка документа"""
+    if request.method == 'POST':
+        form = DocumentUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            document = form.save(commit=False)
+            document.uploaded_by = request.user
+            document.save()
+            messages.success(request, 'Документ успешно загружен')
+            return redirect('document_list')
+    else:
+        form = DocumentUploadForm()
+    
+    context = {
+        'form': form,
+        'title': 'Загрузка документа'
+    }
+    return render(request, 'bookings/document_upload.html', context)
+
+@login_required
+def bulk_document_upload(request):
+    """
+    Массовая загрузка документов с использованием одной формы.
+    """
+    if request.method == 'POST':
+        form = BulkDocumentUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            files = request.FILES.getlist('files')
+            file_type = form.cleaned_data['file_type']
+            is_public = form.cleaned_data['is_public']
+            description_template = form.cleaned_data.get('description_template', '')
+
+            created_documents = []
+            for f in files:
+                description = description_template.format(filename=f.name)
+                doc = Document(
+                    file=f,
+                    title=f.name,
+                    description=description,
+                    file_type=file_type,
+                    is_public=is_public,
+                    uploaded_by=request.user
+                )
+                doc.save()
+                created_documents.append(doc)
+
+            messages.success(request, f'Успешно загружено {len(created_documents)} документов.')
+            return redirect('document_list')
+        else:
+            messages.error(request, 'Ошибка при загрузке документов. Пожалуйста, проверьте форму.')
+    else:
+        form = BulkDocumentUploadForm()
+    
+    return render(request, 'bookings/bulk_document_upload.html', {'form': form})
+
+@login_required
+def document_detail(request, pk):
+    """Детальная информация о документе"""
+    try:
+        document = Document.objects.get(pk=pk)
+    except Document.DoesNotExist:
+        messages.error(request, 'Документ не найден')
+        return redirect('document_list')
+    
+    context = {
+        'document': document,
+        'title': document.title
+    }
+    return render(request, 'bookings/document_detail.html', context)
+
+@login_required
+def document_download(request, pk):
+    """Скачивание документа"""
+    try:
+        document = Document.objects.get(pk=pk)
+        # Проверяем права доступа
+        if not document.is_public and document.uploaded_by != request.user:
+            messages.error(request, 'У вас нет прав для скачивания этого документа')
+            return redirect('document_list')
+        
+        # Возвращаем файл для скачивания
+        response = HttpResponse(document.file, content_type='application/octet-stream')
+        response['Content-Disposition'] = f'attachment; filename="{document.file.name}"'
+        return response
+        
+    except Document.DoesNotExist:
+        messages.error(request, 'Документ не найден')
+        return redirect('document_list')
+
+@login_required
+def room_edit(request, pk):
+    """Редактирование комнаты с файлами"""
+    try:
+        room = Room.objects.get(pk=pk)
+    except Room.DoesNotExist:
+        messages.error(request, 'Комната не найдена')
+        return redirect('room_list')
+    
+    if request.method == 'POST':
+        form = RoomForm(request.POST, request.FILES, instance=room)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Комната успешно обновлена')
+            return redirect('room_detail', pk=room.pk)
+    else:
+        form = RoomForm(instance=room)
+    
+    context = {
+        'form': form,
+        'room': room,
+        'title': f'Редактирование комнаты {room.room_number}'
+    }
+    return render(request, 'bookings/room_edit.html', context)
+
+@login_required
+def booking_edit(request, pk):
+    """Редактирование бронирования с файлами"""
+    try:
+        booking = Booking.objects.get(pk=pk)
+    except Booking.DoesNotExist:
+        messages.error(request, 'Бронирование не найдено')
+        return redirect('booking_list')
+    
+    if request.method == 'POST':
+        form = BookingForm(request.POST, request.FILES, instance=booking)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Бронирование успешно обновлено')
+            return redirect('booking_detail', pk=booking.pk)
+    else:
+        form = BookingForm(instance=booking)
+    
+    context = {
+        'form': form,
+        'booking': booking,
+        'title': f'Редактирование бронирования #{booking.pk}'
+    }
+    return render(request, 'bookings/booking_edit.html', context)
+
+@login_required
+def payment_edit(request, pk):
+    """Редактирование платежа с файлами"""
+    try:
+        payment = Payment.objects.get(pk=pk)
+    except Payment.DoesNotExist:
+        messages.error(request, 'Платёж не найден')
+        return redirect('payment_list')
+    
+    if request.method == 'POST':
+        form = PaymentForm(request.POST, request.FILES, instance=payment)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Платёж успешно обновлён')
+            return redirect('payment_detail', pk=payment.pk)
+    else:
+        form = PaymentForm(instance=payment)
+    
+    context = {
+        'form': form,
+        'payment': payment,
+        'title': f'Редактирование платежа #{payment.pk}'
+    }
+    return render(request, 'bookings/payment_edit.html', context)

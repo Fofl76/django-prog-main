@@ -1,0 +1,23 @@
+# Django и основные компоненты
+Django==5.0.6
+djangorestframework==3.15.0
+djangorestframework-simplejwt==5.3.0
+django-cors-headers==4.3.1
+django-filter==23.5
+
+# Дополнительные утилиты для разработки
+Pillow==10.1.0  # Для работы с изображениями
+python-decouple==3.8  # Для управления переменными окружения
+
+# Генерация PDF документов
+reportlab==3.6.13  # Совместимая версия с xhtml2pdf
+xhtml2pdf==0.2.11  # Конвертация HTML в PDF
+weasyprint==60.2  # Альтернативная библиотека для HTML в PDF
+
+# Утилиты для разработки (опционально)
+django-debug-toolbar==4.2.0  # Для отладки
+django-extensions==3.2.3  # Дополнительные команды Django
+
+# Для продакшена (опционально)
+gunicorn==21.2.0  # WSGI сервер
+whitenoise==6.6.0  # Для статических файлов 

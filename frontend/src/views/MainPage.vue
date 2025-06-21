@@ -65,7 +65,7 @@
               <v-carousel-item
                 v-for="(image, i) in sliderImages"
                 :key="i"
-                :src="image.image"
+                :src="image.image_url"
                 cover
               >
                 <template v-slot:placeholder>
@@ -104,7 +104,7 @@
                 @click="openOfferDetails(offer)"
               >
                 <v-img
-                  :src="offer.image"
+                  :src="offer.image_url"
                   height="200"
                   cover
                 ></v-img>
@@ -126,7 +126,7 @@
         >
           <v-card v-if="selectedOffer">
             <v-img
-              :src="selectedOffer.image"
+              :src="selectedOffer.image_url"
               height="300"
               cover
             ></v-img>
@@ -169,11 +169,11 @@
                 <v-card-text>
                   <div class="d-flex align-center mb-2">
                     <v-avatar color="primary" size="40" class="mr-3">
-                      {{ review.author.charAt(0) }}
+                      {{ review.guest_name.charAt(0) }}
                     </v-avatar>
                     <div>
-                      <div class="font-weight-bold">{{ review.author }}</div>
-                      <div class="text-caption">{{ review.date }}</div>
+                      <div class="font-weight-bold">{{ review.guest_name }}</div>
+                      <div class="text-caption">{{ review.formatted_date }}</div>
                     </div>
                   </div>
                   <div class="mb-2">
@@ -186,7 +186,7 @@
                       half-increments
                     ></v-rating>
                   </div>
-                  <p class="review-text">{{ review.text }}</p>
+                  <p class="review-text">{{ review.comment }}</p>
                 </v-card-text>
               </v-card>
             </v-col>
@@ -194,12 +194,14 @@
         </v-container>
       </v-container>
     </v-main>
+    <AppFooter />
   </div>
 </template>
 
 <script>
 import { mapState, mapActions } from 'vuex'
-import AppHeader from './Header.vue'
+import AppHeader from './AppHeader.vue'
+import AppFooter from './AppFooter.vue'
 import axios from 'axios'
 
 // Устанавливаем базовый URL для всех запросов
@@ -208,7 +210,8 @@ axios.defaults.baseURL = 'http://localhost:8000'
 export default {
   name: 'MainPage',
   components: {
-    AppHeader
+    AppHeader,
+    AppFooter
   },
   data() {
     return {
@@ -227,26 +230,7 @@ export default {
       specialOffers: [],
       showOfferDialog: false,
       selectedOffer: null,
-      recentReviews: [
-        {
-          author: 'Анна Петрова',
-          date: '15.03.2024',
-          rating: 5,
-          text: 'Отличный отдых! Прекрасный сервис, уютные номера и внимательный персонал. Обязательно вернемся сюда снова.'
-        },
-        {
-          author: 'Иван Смирнов',
-          date: '10.03.2024',
-          rating: 4.5,
-          text: 'Хороший гостевой дом с отличным расположением. Особенно понравились экскурсии и местная кухня.'
-        },
-        {
-          author: 'Мария Иванова',
-          date: '05.03.2024',
-          rating: 5,
-          text: 'Прекрасное место для семейного отдыха. Дети в восторге от бассейна и развлекательной программы.'
-        }
-      ]
+      recentReviews: []
     }
   },
   computed: {
@@ -275,16 +259,7 @@ export default {
         console.log('Ответ от сервера:', response)
         console.log('Полученные изображения:', response.data)
         
-        // Проверяем формат данных и добавляем полный URL для изображений
-        this.sliderImages = response.data.map(image => {
-          console.log('Обработка изображения:', image)
-          // Убедимся, что URL изображения начинается с /media/
-          // Удаляем эту логику, так как полный URL уже приходит с бэкенда
-          return {
-            ...image,
-            image: image.image // Используем URL как есть
-          }
-        })
+        this.sliderImages = response.data.results || response.data
         
         console.log('sliderImages после обработки:', this.sliderImages)
       } catch (error) {
@@ -295,9 +270,17 @@ export default {
     async fetchSpecialOffers() {
       try {
         const response = await axios.get('/api/special-offers/')
-        this.specialOffers = response.data
+        this.specialOffers = response.data.results || response.data
       } catch (error) {
         console.error('Ошибка при загрузке специальных предложений:', error)
+      }
+    },
+    async fetchRecentReviews() {
+      try {
+        const response = await axios.get('/api/reviews/recent/')
+        this.recentReviews = response.data
+      } catch (error) {
+        console.error('Ошибка при загрузке отзывов:', error)
       }
     },
     openOfferDetails(offer) {
@@ -316,6 +299,7 @@ export default {
   async created() {
     await this.fetchSliderImages()
     await this.fetchSpecialOffers()
+    await this.fetchRecentReviews()
   }
 }
 </script>

@@ -1,0 +1,374 @@
+{
+	"info": {
+		"_postman_id": "your-collection-id",
+		"name": "Guesthouse Booking API",
+		"description": "API для системы бронирования гостевого дома",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Аутентификация",
+			"item": [
+				{
+					"name": "Регистрация",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"testuser\",\n    \"email\": \"test@example.com\",\n    \"password\": \"testpass123\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/auth/register/",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "auth", "register", ""]
+						}
+					}
+				},
+				{
+					"name": "Вход",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"testuser\",\n    \"password\": \"testpass123\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/auth/token/",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "auth", "token", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Комнаты",
+			"item": [
+				{
+					"name": "Получить список комнат",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8000/api/rooms/?min_rating=4&include_guest_details=true",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "rooms", ""],
+							"query": [
+								{
+									"key": "min_rating",
+									"value": "4"
+								},
+								{
+									"key": "include_guest_details",
+									"value": "true"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Получить доступные комнаты",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8000/api/rooms/available/?check_in=2024-03-01&check_out=2024-03-05",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "rooms", "available", ""],
+							"query": [
+								{
+									"key": "check_in",
+									"value": "2024-03-01"
+								},
+								{
+									"key": "check_out",
+									"value": "2024-03-05"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Бронирования",
+			"item": [
+				{
+					"name": "Создать бронирование",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"room\": 1,\n    \"check_in\": \"2024-03-01\",\n    \"check_out\": \"2024-03-05\",\n    \"guests_count\": 2\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/bookings/",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "bookings", ""]
+						}
+					}
+				},
+				{
+					"name": "Получить мои бронирования",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8000/api/bookings/my/?include_amenities=true&include_contact=true",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "bookings", "my", ""],
+							"query": [
+								{
+									"key": "include_amenities",
+									"value": "true"
+								},
+								{
+									"key": "include_contact",
+									"value": "true"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Профиль",
+			"item": [
+				{
+					"name": "Получить профиль",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8000/api/profile/me/?period=month&include_cancelled=true",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "profile", "me", ""],
+							"query": [
+								{
+									"key": "period",
+									"value": "month"
+								},
+								{
+									"key": "include_cancelled",
+									"value": "true"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Обновить профиль",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"first_name\": \"Иван\",\n    \"last_name\": \"Иванов\",\n    \"phone_number\": \"+79001234567\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/profile/me/",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "profile", "me", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Отзывы",
+			"item": [
+				{
+					"name": "Создать отзыв",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"room\": 1,\n    \"rating\": 5,\n    \"comment\": \"Отличный номер, все понравилось!\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/reviews/",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "reviews", ""]
+						}
+					}
+				},
+				{
+					"name": "Получить отзывы комнаты",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8000/api/rooms/1/reviews/?include_title=true&max_comment_length=100",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "rooms", "1", "reviews", ""],
+							"query": [
+								{
+									"key": "include_title",
+									"value": "true"
+								},
+								{
+									"key": "max_comment_length",
+									"value": "100"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Платежи",
+			"item": [
+				{
+					"name": "Создать платеж",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"booking\": 1,\n    \"amount\": 10000,\n    \"payment_method\": \"card\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/payments/",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "payments", ""]
+						}
+					}
+				},
+				{
+					"name": "Получить платежи бронирования",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8000/api/payments/?include_room_details=true&currency=USD",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "payments", ""],
+							"query": [
+								{
+									"key": "include_room_details",
+									"value": "true"
+								},
+								{
+									"key": "currency",
+									"value": "USD"
+								}
+							]
+						}
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "access_token",
+			"value": "your-access-token"
+		}
+	]
+} 

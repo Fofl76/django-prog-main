@@ -29,6 +29,11 @@ const routes = [
     component: RoomsCatalog
   },
   {
+    path: '/catalog',
+    name: 'catalog',
+    component: RoomsCatalog
+  },
+  {
     path: '/bookings',
     name: 'bookings',
     component: BookingsPage,
